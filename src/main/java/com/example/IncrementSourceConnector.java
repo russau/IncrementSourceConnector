@@ -38,6 +38,10 @@ public class IncrementSourceConnector extends SourceConnector {
 
   @Override
   public void start(Map<String, String> props) {
+    /***********************
+     * The connector has been started, retrieve the settings passed in the props 
+     * 
+     **********************/
     log.info("STARTING IncrementSourceConnector");
     final AbstractConfig parsedConfig = new AbstractConfig(CONFIG_DEF, props);
     increments = parsedConfig.getList(INCREMENTS_CONFIG);
@@ -61,16 +65,28 @@ public class IncrementSourceConnector extends SourceConnector {
 
   @Override
   public List<Map<String, String>> taskConfigs(int maxTasks) {
+    /***********************
+     * We have been passed a maxTasks that we allocate. We determine the actual number
+     * of tasks to "spread" the list of sequences across.  We can do this by returning
+     * configuration for the number of tasks we want.
+     * 
+     * We will only grow to the min of number of increments and max tasks.  Eg. 5 increments, and 3 maxTasks
+     * results in 3 tasks each with 2+2+1 increments
+     **********************/
     final int numGroups = Math.min(increments.size(), maxTasks);
-    // Group the increments
+
+    
+    /***********************
+     * groupPartitions groups our increments and speads them evenly over our groups
+     **********************/
     final List<List<String>> incrementsGrouped = ConnectorUtils.groupPartitions(increments, numGroups);
     final List<Map<String, String>> taskConfigs = new ArrayList<>();
     for (List<String> taskIncrements : incrementsGrouped) {
       final Map<String, String> taskProps = new HashMap<>();
       taskProps.put(TOPIC_PREFIX_CONFIG, topicPrefix);
+      // we can pass in the increments for each group/task
       taskProps.put(INCREMENTS_CONFIG, String.join(",", taskIncrements));
       taskConfigs.add(taskProps);
-
       log.info("Task config: (prefix: {}, increments {})", topicPrefix, String.join(",", taskIncrements));
     }
     return taskConfigs;

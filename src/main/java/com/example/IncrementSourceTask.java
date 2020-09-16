@@ -22,7 +22,8 @@ public class IncrementSourceTask extends SourceTask {
   public static final String INCREMENT_FIELD = "increment";
   public static final String POSITION_FIELD = "position";
   private static final Schema VALUE_SCHEMA = SchemaBuilder.struct().name("sequence")
-      .field("threadId", Schema.INT64_SCHEMA).field("hostname", Schema.STRING_SCHEMA)
+      .field("threadId", Schema.INT64_SCHEMA)
+      .field("hostname", Schema.STRING_SCHEMA)
       .field("value", Schema.INT64_SCHEMA).build();
 
   // a map of increment and current offset we are up to
@@ -37,6 +38,8 @@ public class IncrementSourceTask extends SourceTask {
 
   @Override
   public void start(Map<String, String> props) {
+    // retrieve all the config setttings created in IncrementSourceConnector
+    // no need to validate as settings were validated in the Connector
     topicPrefix = props.get(IncrementSourceConnector.TOPIC_PREFIX_CONFIG);
     final String incrementsString = props.get(IncrementSourceConnector.INCREMENTS_CONFIG);
     increments = Arrays.stream(incrementsString.split(",")).mapToInt(Integer::parseInt).toArray();
@@ -48,7 +51,6 @@ public class IncrementSourceTask extends SourceTask {
 
   @Override
   public List<SourceRecord> poll() throws InterruptedException {
-    log.info("!!!!!!!! POLLING-one !!!!!!!!!!!!!!");
     final long threadId = Thread.currentThread().getId();
     String hostname = "";
     try {
@@ -59,17 +61,28 @@ public class IncrementSourceTask extends SourceTask {
 
     final ArrayList<SourceRecord> records = new ArrayList<>();
 
+    // The task can be assigned one or more increments
+    // Loop thru all the increments and produce the next value
     for (Integer increment : increments) {
       Long offset = offsets.get(increment);
 
-      final Map<String, Object> storedOffset = context.offsetStorageReader()
-          .offset(Collections.singletonMap(INCREMENT_FIELD, increment));
-      if (offset == 0 && storedOffset != null) {
-        // we have a stored offset, let's use this one
-        offset = (Long) storedOffset.get(POSITION_FIELD);
-        log.info("We found an offset for increment {} value {}", increment, offset);
+      /***************************** 
+       * Is there a persisted offset to continue from
+       *****************************/
+      if (offset == 0) {
+        final Map<String, Object> storedOffset = context.offsetStorageReader()
+            .offset(Collections.singletonMap(INCREMENT_FIELD, increment));
+        if (storedOffset != null) {
+          // we have a stored offset, let's use this one
+          offset = (Long) storedOffset.get(POSITION_FIELD);
+          log.info("We found an offset for increment {} value {}", increment, offset);
+        }
       }
 
+      /***************************** 
+       * Build the structure record with some educational information: threadId, hostname
+       * and finally the generated sequence
+       ******************************/
       final String topic = topicPrefix + increment;
       final Long value = offset * increment;
       final Struct struct = new Struct(VALUE_SCHEMA)
@@ -79,7 +92,7 @@ public class IncrementSourceTask extends SourceTask {
 
       records.add(
           new SourceRecord(offsetKey(increment),
-            offsetValue(offset),
+            offsetValue(++offset),
             topic,
             null,
             null,
@@ -89,14 +102,19 @@ public class IncrementSourceTask extends SourceTask {
             System.currentTimeMillis()
           )
       );
-      offsets.put(increment, offset + 1);
+      offsets.put(increment, offset);
     }
-
-    log.info("!!!!!!!! SLEEPING-one !!!!!!!!!!!!!!");
 
     synchronized (this) {
       this.wait(1000);
     }
+    
+    /***************************** 
+     * The schema and structured data returned from our task
+     * can now have additional transformations and conversions config in Kafka Connect
+     * e.g. an AvroConverter con now write the schema data to schema registry, and serialize
+     * the data as avro bytes
+     ******************************/
     return records;
   }
 
