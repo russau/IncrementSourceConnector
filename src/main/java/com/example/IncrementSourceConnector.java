@@ -23,9 +23,9 @@ public class IncrementSourceConnector extends SourceConnector {
 	public static final String DEFAULT_TOPIC_PREFIX = "increment_";
 	public static final String INCREMENTS_CONFIG = "increments";
 
-
 	private static final ConfigDef CONFIG_DEF = new ConfigDef()
-			.define(TOPIC_PREFIX_CONFIG, Type.STRING, DEFAULT_TOPIC_PREFIX, Importance.LOW, "Prefix for topics to publish data to")
+			.define(TOPIC_PREFIX_CONFIG, Type.STRING, DEFAULT_TOPIC_PREFIX, Importance.LOW,
+					"Prefix for topics to publish data to")
 			.define(INCREMENTS_CONFIG, Type.LIST, Importance.HIGH, "A list of increments for the sequences");
 
 	private List<String> increments;
@@ -44,13 +44,13 @@ public class IncrementSourceConnector extends SourceConnector {
 
 		// config validation: all the increments need to be integers
 		try {
-			for (String s: increments) {
+			for (String s : increments) {
 				Integer.parseInt(s);
 			}
 		} catch (java.lang.NumberFormatException e) {
 			throw new ConfigException("'increments' must be a collection of integers");
 		}
-		
+
 		topicPrefix = parsedConfig.getString(TOPIC_PREFIX_CONFIG);
 	}
 
@@ -61,19 +61,19 @@ public class IncrementSourceConnector extends SourceConnector {
 
 	@Override
 	public List<Map<String, String>> taskConfigs(int maxTasks) {
-    int numGroups = Math.min(increments.size(), maxTasks);
-    // Group the channels
-    List<List<String>> incrementsGrouped = ConnectorUtils.groupPartitions(increments, numGroups);
-    List<Map<String, String>> taskConfigs = new ArrayList<>();
-    for(List<String> taskIncrements: incrementsGrouped) {
+		int numGroups = Math.min(increments.size(), maxTasks);
+		// Group the channels
+		List<List<String>> incrementsGrouped = ConnectorUtils.groupPartitions(increments, numGroups);
+		List<Map<String, String>> taskConfigs = new ArrayList<>();
+		for (List<String> taskIncrements : incrementsGrouped) {
 			Map<String, String> taskProps = new HashMap<>();
 			taskProps.put(TOPIC_PREFIX_CONFIG, topicPrefix);
-      taskProps.put(INCREMENTS_CONFIG, String.join(",", taskIncrements));
+			taskProps.put(INCREMENTS_CONFIG, String.join(",", taskIncrements));
 			taskConfigs.add(taskProps);
-			
+
 			log.info("Task config: (prefix: {}, increments {})", topicPrefix, String.join(",", taskIncrements));
-    }
-    return taskConfigs;
+		}
+		return taskConfigs;
 	}
 
 	@Override
