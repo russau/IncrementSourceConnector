@@ -1,6 +1,23 @@
+First turn on kafka + schema registry.
+
 ```
-export CLASSPATH=extensions/connect-mediawiki-0.0.1.jar
+docker-compose up -d zookeeper kafka schema-registry
+```
+
+Build the shadow jar
+
+```
+./gradlew shadowJar
 connect-standalone connect-avro-standalone.properties connector1.properties
+```
+
+View the output
+
+```
+kafka-avro-console-consumer --bootstrap-server kafka:9092 --whitelist 'seq_.+' --from-beginning
+```
+
+You can see the contents of the `/tmp/connect.offsets` file using jshell.
 
 ```
 kafka_bin=$(dirname $(which kafka-console-consumer))\nshare_jars="$kafka_bin/../share/java/kafka/*"
@@ -28,18 +45,15 @@ for (Map.Entry<byte[], byte[]> mapEntry : raw.entrySet()) {
 }
 ```
 
-```
-kafkacat -C -b kafka:9092 -t banana -s value=avro -r http://schema-registry:8081 -f 'Topic %t, payload: %s\n' -q
-```
+Bring up the two node connect cluster.  Check out the configured plugins.
 
-https://docs.confluent.io/current/connect/managing/monitoring.html#connect-managing-rest-examples
 
 ```
+docker-compose up -d connect-1 connect-2
 curl localhost:8083/connector-plugins | jq
 ```
 
 ```
-
 curl -X POST \
   -H "Content-Type: application/json" \
   --data '{
@@ -56,7 +70,15 @@ curl -X POST \
 }' http://connect:8083/connectors
 ```
 
+View the configuration of tasks / hosts
+
 ```
-curl http://connect:8083/connectors/kafka-connect-increment/tasks
-curl http://connect:8083/connectors/kafka-connect-increment/status
+curl http://connect:8083/connectors/kafka-connect-increment/tasks | jq .
+curl http://connect:8083/connectors/kafka-connect-increment/status | jq .
+```
+
+View the offsets getting written to a kafka topic. `offset.flush.interval.ms` defaults to 60secs.
+
+```
+kafka-console-consumer --bootstrap-server kafka:9092 --topic connect-offsets --property print.key=true --from-beginning
 ```
