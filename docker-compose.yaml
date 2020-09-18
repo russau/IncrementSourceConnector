@@ -18,24 +18,25 @@ services:
     environment:
       KAFKA_BROKER_ID: 101
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: DOCKER://kafka:9093,LOCAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: DOCKER:PLAINTEXT,LOCAL:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka:9092"
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka:9093"
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
 
   schema-registry:
     image: confluentinc/cp-schema-registry:5.5.0-1-ubi8
-    restart: always
     container_name: schema-registry
     ports:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:9092'
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:9093'
       KAFKA_REST_CUB_KAFKA_TIMEOUT: 180 # https://github.com/confluentinc/cp-docker-images/issues/807
 
   connect-1:
@@ -47,7 +48,7 @@ services:
       - ./extensions:/usr/share/java/kafka-connect-sequence
     environment:
       CONNECT_REST_PORT: 8083
-      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9093
       CONNECT_GROUP_ID: "connect"
       CONNECT_CONFIG_STORAGE_TOPIC: "connect-config"
       CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
@@ -73,7 +74,7 @@ services:
       - ./extensions:/usr/share/java/kafka-connect-sequence
     environment:
       CONNECT_REST_PORT: 8084
-      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9093
       CONNECT_GROUP_ID: "connect"
       CONNECT_CONFIG_STORAGE_TOPIC: "connect-config"
       CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
