@@ -91,15 +91,12 @@ public class IncrementSourceTask extends SourceTask {
           .put("value", value);
 
       records.add(
-          new SourceRecord(offsetKey(increment),
-            offsetValue(++offset),
-            topic,
-            null,
-            null,
-            null,
-            VALUE_SCHEMA,
-            struct,
-            System.currentTimeMillis()
+          new SourceRecord(offsetKey(increment),  // sourcePartition
+            offsetValue(++offset),                // sourceOffset
+            topic,                                // topic
+            null,                                 // partition
+            VALUE_SCHEMA,                         // valueSchema
+            struct                                // value
           )
       );
       offsets.put(increment, offset);
