@@ -29,7 +29,7 @@ Returns:
 [[departments, employees], [dept_emp, dept_manager], [titles, salaries]]
 ```
 
-The connector these result to build task configuration that assigns the partition groups to tasks.
+The connector uses these result to build task configuration that assigns the partition groups to tasks.
 
 
 ### Can I record my position in the stream of source data?  
