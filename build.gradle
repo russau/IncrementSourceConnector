@@ -35,7 +35,7 @@ compileJava {
 }
 
 shadowJar {
-    archiveBaseName = "connect-mediawiki"
+    archiveBaseName = "connect-increment"
     archiveClassifier = ""
     destinationDirectory = file("extensions")
     dependencies {
